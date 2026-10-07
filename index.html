@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c0f">
+<title>Engrare Edit</title>
+<link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+
+<!-- giris -->
+<div id="login" class="overlay">
+  <form id="loginform" class="card">
+    <div class="card-logo">🎬</div>
+    <h1>Engrare Edit</h1>
+    <p class="muted">CapCut tarzı modern reels editörü</p>
+    <input id="lu" placeholder="Kullanıcı adı" autocomplete="username">
+    <input id="lp" type="password" placeholder="Şifre" autocomplete="current-password">
+    <button type="submit" class="primary">Giriş Yap</button>
+    <div id="lerr" class="err"></div>
+  </form>
+</div>
+
+<!-- editor -->
+<div id="app" hidden>
+
+  <!-- topbar -->
+  <header class="topbar">
+    <button id="btnMenu" class="icon-btn" title="Projeler ve Menü" aria-label="menü">☰</button>
+    <div class="pname-wrap">
+      <input id="pname" class="pname" placeholder="Proje adı" value="Yeni reels">
+      <span id="saveStatus" class="save-status" title="Kayıt durumu">✓</span>
+    </div>
+    <button id="btnExport" class="export-btn">Dışa Aktar</button>
+  </header>
+
+  <!-- stage / player -->
+  <main class="stage">
+    <div id="preview" class="preview">
+      <video id="pv" playsinline webkit-playsinline preload="metadata"></video>
+      <img id="pvi" alt="" hidden>
+      <div id="textOverlay" class="text-overlay"></div>
+      <div id="pvempty" class="pvempty">
+        <div class="empty-icon">🎬</div>
+        <div class="empty-text">Başlamak için <b>＋ Medya</b>'ya dokun</div>
+      </div>
+      <button id="playBtn" class="playbtn" hidden aria-label="oynat/durdur">▶</button>
+    </div>
+    <audio id="pvaudio" hidden></audio>
+  </main>
+
+  <!-- timebar -->
+  <div class="timebar">
+    <button id="btnPlay" class="mini-play-btn" aria-label="oynat/durdur">▶</button>
+    <span id="tcur" class="time-digit">0:00.0</span>
+    <span class="sep">/</span>
+    <span id="ttot" class="time-digit muted">0:00.0</span>
+    <input id="scrubber" class="time-scrubber" type="range" min="0" max="100" step="0.1" value="0" aria-label="ilerleme çubuğu">
+    <span id="tinfo" class="tinfo muted"></span>
+  </div>
+
+  <!-- timeline -->
+  <div class="timeline-container">
+    <div class="playhead-line"></div>
+    <div id="tlTrack" class="tl-track"></div>
+  </div>
+
+  <!-- contextual clip actions bar (appears when a clip is selected) -->
+  <div id="clipbar" class="clipbar" hidden>
+    <button id="cbSplit" class="cb-btn"><span class="ic">✂</span><span>Böl</span></button>
+    <button id="cbTrim" class="cb-btn"><span class="ic">⏱</span><span>Kırp</span></button>
+    <button id="cbVol" class="cb-btn"><span class="ic">🔊</span><span>Ses</span></button>
+    <button id="cbLeft" class="cb-btn"><span class="ic">◀</span><span>Öne</span></button>
+    <button id="cbRight" class="cb-btn"><span class="ic">▶</span><span>Arkaya</span></button>
+    <button id="cbDel" class="cb-btn danger"><span class="ic">🗑</span><span>Sil</span></button>
+    <button id="cbClose" class="cb-btn close" title="Seçimi Kapat"><span class="ic">✕</span></button>
+  </div>
+
+  <!-- bottom toolbar (capcut style) -->
+  <nav id="toolbar" class="toolbar">
+    <button data-tool="media"><span class="ic">＋</span><span>Medya</span></button>
+    <button data-tool="split"><span class="ic">✂</span><span>Böl</span></button>
+    <button data-tool="text"><span class="ic">T</span><span>Metin</span></button>
+    <button data-tool="audio"><span class="ic">♪</span><span>Ses</span></button>
+    <button data-tool="settings"><span class="ic">⚙</span><span>Ayarlar</span></button>
+  </nav>
+
+</div>
+
+<!-- scrim backdrop -->
+<div id="scrim" class="scrim" hidden></div>
+
+<!-- bottom sheets -->
+<div id="sheetMedia" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Medya Ekle</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body sheet-body-iframe">
+    <iframe id="drive" title="Drive"></iframe>
+  </div>
+</div>
+
+<div id="sheetText" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Metin Katmanları</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <button id="addtext" class="btn-primary-wide">＋ Yeni Metin Ekle</button>
+    <div id="texts" class="list"></div>
+  </div>
+</div>
+
+<div id="sheetAudio" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Arka Plan Müziği</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div id="bg" class="list"></div>
+    <button id="addaudio" class="btn-primary-wide">＋ Müzik Seç / Değiştir</button>
+  </div>
+</div>
+
+<div id="sheetTrim" class="sheet" hidden>
+  <div class="sheet-head">
+    <div id="trimTitle" class="sheet-title">Kırp</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body" id="trimBody"></div>
+</div>
+
+<div id="sheetVolume" class="sheet" hidden>
+  <div class="sheet-head">
+    <div id="volTitle" class="sheet-title">Klip Sesi</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body" id="volBody"></div>
+</div>
+
+<div id="sheetSettings" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Ayarlar & Dışa Aktar</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="settings-grid">
+      <label>
+        <span>Format (En-Boy)</span>
+        <select id="res">
+          <option value="1080x1920">Reels 9:16 (Dikey)</option>
+          <option value="1920x1080">Yatay 16:9 (YouTube)</option>
+          <option value="1080x1080">Kare 1:1 (Gönderi)</option>
+        </select>
+      </label>
+      <label>
+        <span>FPS</span>
+        <select id="fps">
+          <option value="30">30 FPS</option>
+          <option value="60">60 FPS</option>
+          <option value="24">24 FPS</option>
+        </select>
+      </label>
+      <label>
+        <span>Codec</span>
+        <select id="codec">
+          <option value="h264">H.264 (Hızlı & Uyumlu)</option>
+          <option value="hevc">H.265 (HEVC)</option>
+        </select>
+      </label>
+      <label>
+        <span>Kalite</span>
+        <select id="qp">
+          <option value="18">Yüksek Kalite (QP 18)</option>
+          <option value="23" selected>Dengeli (QP 23)</option>
+          <option value="28">Hızlı / Düşük Boyut (QP 28)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="render-box">
+      <div class="render-head">
+        <b>Dışa Aktarma Durumu</b>
+        <button id="btnStartRender" class="primary-sm">Render Başlat</button>
+      </div>
+      <div id="job" class="job">Hazır</div>
+      <a id="download" class="download-btn" hidden download>⬇ Sonucu İndir (.mp4)</a>
+    </div>
+  </div>
+</div>
+
+<div id="sheetProjects" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Projeler & Hesap</div>
+    <button class="sheet-close" data-close aria-label="kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="user-panel">
+      <div class="user-info">
+        <span class="user-avatar">👤</span>
+        <span id="who" class="user-name">admin</span>
+      </div>
+      <button id="logout" class="btn-logout">⎋ Çıkış</button>
+    </div>
+
+    <div class="proj-menu-actions">
+      <button id="save" class="btn-primary-wide">💾 Projeyi Kaydet</button>
+      <button id="newproj" class="btn-ghost-wide">＋ Yeni Proje Başlat</button>
+    </div>
+
+    <div class="proj-subheading">Kayıtlı Projeler</div>
+    <div id="projects" class="projects-list"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="config.js?v=5"></script>
+<script src="app.js?v=5"></script>
+</body>
+</html>
