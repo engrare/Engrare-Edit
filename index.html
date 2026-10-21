@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0b0c0f">
+<title>Engrare Edit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+
+<!-- giris -->
+<div id="login" class="overlay" hidden>
+  <form id="loginform" class="card">
+    <div class="card-logo">🎬</div>
+    <h1>Engrare Edit</h1>
+    <p class="muted">Reels editörü</p>
+    <input id="lu" placeholder="Kullanıcı adı" autocomplete="username" autocapitalize="off">
+    <input id="lp" type="password" placeholder="Şifre" autocomplete="current-password">
+    <button type="submit" class="btn primary">Giriş Yap</button>
+    <div id="lerr" class="err"></div>
+  </form>
+</div>
+
+<!-- editor -->
+<div id="app" hidden>
+  <header class="topbar">
+    <button id="btnMenu" class="icon-btn" title="Projeler ve hesap" aria-label="Menü"></button>
+    <div class="pname-wrap">
+      <input id="pname" class="pname" placeholder="Proje adı" maxlength="80" aria-label="Proje adı">
+      <i id="saveState" class="save-state" data-state="saved"></i>
+    </div>
+    <button id="btnUndo" class="icon-btn" title="Geri al (Ctrl+Z)" aria-label="Geri al" disabled></button>
+    <button id="btnRedo" class="icon-btn" title="Yinele (Ctrl+Shift+Z)" aria-label="Yinele" disabled></button>
+    <button id="btnStudio" class="icon-btn studio-btn" title="AI Stüdyo" aria-label="AI Stüdyo"></button>
+    <button id="btnExport" class="export-btn">Dışa Aktar</button>
+  </header>
+
+  <main id="stage" class="stage">
+    <div id="preview" class="preview">
+      <div id="pvMedia" class="pv-media-wrap">
+        <video id="va" class="pv-media" playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
+        <video id="vb" class="pv-media" playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
+        <img id="pimg" class="pv-media" alt="">
+      </div>
+      <div id="imgLayer" class="text-layer"></div>
+      <div id="textLayer" class="text-layer"></div>
+      <div id="guides" class="guides"><i class="gx"></i><i class="gy"></i></div>
+      <div id="pvMsg" class="pv-msg" hidden></div>
+      <button id="emptyAdd" class="empty-add" hidden>
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <b>Medya ekle</b>
+        <small>Video veya fotoğraf seç</small>
+      </button>
+    </div>
+    <audio id="music" preload="auto"></audio>
+  </main>
+
+  <div class="timebar">
+    <div class="time"><span id="tcur">0:00.00</span><span class="muted"> / <span id="ttot">0:00.00</span></span></div>
+    <div class="transport">
+      <button id="btnPrev" class="icon-btn sm" title="Önceki kare (←)" aria-label="Önceki kare"></button>
+      <button id="btnPlay" class="play-btn" title="Oynat / durdur (Boşluk)" aria-label="Oynat"></button>
+      <button id="btnNext" class="icon-btn sm" title="Sonraki kare (→)" aria-label="Sonraki kare"></button>
+    </div>
+    <div class="zoom">
+      <button id="btnZoomOut" class="icon-btn sm" title="Uzaklaş (−)" aria-label="Uzaklaş"></button>
+      <button id="btnZoomIn" class="icon-btn sm" title="Yakınlaş (+)" aria-label="Yakınlaş"></button>
+    </div>
+  </div>
+
+  <div id="timeline" class="timeline">
+    <canvas id="tlCanvas"></canvas>
+    <div id="tlLayer" class="tl-layer"></div>
+    <div id="tlReorder" class="tl-reorder" hidden></div>
+    <div class="tl-playhead"></div>
+    <div id="tlTip" class="tl-tip" hidden></div>
+  </div>
+
+  <div class="bottom">
+    <nav id="toolbar" class="toolbar"></nav>
+    <section id="panel" class="panel" hidden></section>
+  </div>
+</div>
+
+<!-- AI Stüdyo: editörün üstüne açılan menü (yeni proje penceresi gibi) -->
+<div id="sheetStudio" class="sheet tall studio-sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title"><span class="spark">✦</span> AI Stüdyo</div>
+    <div class="sheet-head-r">
+      <button id="stUsageChip" class="usage-chip" title="AI kullanılabilirlik (yenile)">—</button>
+      <button class="sheet-close" data-close aria-label="Kapat">✕</button>
+    </div>
+  </div>
+  <div class="sheet-body studio-body">
+    <div class="studio-col">
+      <section id="stUsageCard" class="st-card st-usage">
+        <div class="field-head"><span>AI kullanılabilirlik</span><b id="stUsageVal">—</b></div>
+        <div class="usage-bar"><i id="stUsageBar"></i></div>
+        <div id="stUsageSub" class="panel-note"></div>
+      </section>
+
+      <section id="stCompose" class="st-card st-compose">
+        <div id="stTabs" class="st-tabs" role="tablist">
+          <button type="button" class="st-tab on" data-t="content">İçerik</button>
+          <button type="button" class="st-tab" data-t="cut">Kesim</button>
+          <button type="button" class="st-tab" data-t="caps">Altyazı</button>
+          <button type="button" class="st-tab" data-t="sound">Ses</button>
+          <button type="button" class="st-tab" data-t="brand">Marka</button>
+        </div>
+
+        <div class="st-pane" data-p="content">
+          <textarea id="stPrompt" class="st-prompt" rows="5" maxlength="4000" placeholder="Nasıl bir video istiyorsun? Örn: Yeni kulaklığımız için 15 saniyelik, enerjik bir tanıtım. Ürün fotoğraflarını kullan, sonunda logo ve &quot;Şimdi keşfet&quot; yazsın."></textarea>
+          <div id="stBrandQuick" class="st-brandquick" hidden><div id="stBrandQuickBody"></div></div>
+          <div id="stFiles" class="st-files" hidden></div>
+          <div class="st-attach">
+            <button id="stUpload" class="btn ghost sm" type="button"></button>
+            <button id="stDrive" class="btn ghost sm" type="button"></button>
+            <span id="stFileCount" class="muted"></span>
+            <input id="stFileInput" type="file" multiple hidden accept="image/*,video/*,audio/*,.pdf,.txt,.md">
+          </div>
+          <div id="stStyleField" class="field" hidden>
+            <div class="field-head">Kurgu</div>
+            <div id="stStyles"></div>
+            <div id="stStyleNote" class="panel-note"></div>
+          </div>
+          <div class="st-row">
+            <div class="field"><div class="field-head">Format</div><div id="stFormats"></div></div>
+            <div class="field"><div id="stDurHead" class="field-head">Süre</div><div id="stDurations"></div></div>
+          </div>
+          <div class="field st-power">
+            <div class="field-head"><span>Yapay zeka gücü</span><b id="stPowerName"></b></div>
+            <input id="stPower" type="range" min="1" max="3" step="1" value="2" aria-label="Yapay zeka gücü">
+            <div id="stPowerTicks" class="st-ticks"><i></i><i></i><i></i></div>
+            <div class="st-power-labels"><span>Hızlı</span><span>Daha kaliteli</span></div>
+          </div>
+        </div>
+
+        <div class="st-pane" data-p="cut" hidden>
+          <div class="field">
+            <div class="field-head">Boşluk eşiği</div>
+            <div id="stGaps"></div>
+            <div class="panel-note">Tek ayar iki yerde işler: AI anlatımında konuşmalar ve sahneler arası bekleme bu süreye çekilir; eklediğin konuşma videolarında bundan uzun sessizlik kısaltılır.</div>
+          </div>
+          <div class="field">
+            <div class="field-head">Konuşma videosu kesimi</div>
+            <div id="stCutOpts"></div>
+          </div>
+          <div class="field"><div class="field-head">Konuşma dili</div><div id="stLangs"></div></div>
+          <div class="panel-note">Kesim, eklediğin konuşma içeren videolara uygulanır: konuşma yazıya çevrilir, seçtiklerin kesilir. "Sadece kes" kurgusunda AI en iyi bölümleri de seçebilir (İçerik sekmesindeki kutuya yazdığın konulara göre).</div>
+        </div>
+
+        <div class="st-pane" data-p="caps" hidden>
+          <div class="field">
+            <div class="field-head">Altyazı</div>
+            <div id="stCapOpts"></div>
+          </div>
+          <div class="field">
+            <div class="field-head">Söylenen kelimenin rengi</div>
+            <div id="stCapColors" class="swatches"></div>
+          </div>
+          <div class="field"><div class="field-head">Boyut</div><div id="stCapSizes"></div></div>
+          <div id="stCapPreview" class="st-cap-preview" aria-hidden="true"><span class="on">Söylenen</span> <span class="on">kelimeler</span> <span class="off">henüz söylenmeyenler</span></div>
+          <div class="panel-note">Altyazılar söz öbekleri halinde, en altta, Instagram'ın alt bilgi alanının hemen üstünde durur. Söylenmemiş kelimeler gri görünür, söylendikçe seçtiğin renge döner. Hem AI anlatımına hem videodaki konuşmaya uygulanır.</div>
+        </div>
+
+        <div class="st-pane" data-p="sound" hidden>
+          <div id="stVoiceField" class="field"><div class="field-head">Seslendirme</div><div id="stVoices"></div></div>
+          <div class="field">
+            <div class="field-head">Arka plan müziği</div>
+            <div id="stMusic"></div>
+            <div class="panel-note">AI, videonun tonuna uygun parçayı kütüphaneden kendisi seçer; ses seviyesini sunucu ayarlar, konuşma varken kısılır.</div>
+          </div>
+        </div>
+
+        <div class="st-pane" data-p="brand" hidden>
+          <div class="field">
+            <div class="field-head">Marka kiti</div>
+            <div id="stBrandSwitch"></div>
+            <div class="panel-note">Açıkken AI her videoda markanı (ad, renkler, site, hesap), seçtiğin ürünü ve logoyu kullanır; sonuna kapanış çağrısı ekler. Bilgileri aşağıdan düzenleyebilirsin.</div>
+          </div>
+          <div id="stBrandEdit"></div>
+        </div>
+
+        <button id="stGo" class="btn primary st-go" type="button"><span>Video oluştur</span></button>
+      </section>
+
+      <section id="stJob" class="st-card st-job" hidden>
+        <div class="st-job-head">
+          <div class="st-job-name">
+            <div id="stJobTitle" class="st-job-title"></div>
+            <div id="stJobMeta" class="sheet-sub"></div>
+          </div>
+          <button id="stNewBtn" class="btn ghost sm" type="button">Yeni video</button>
+        </div>
+        <details id="stPromptBox" class="st-promptbox">
+          <summary>Promptlar</summary>
+          <div id="stPromptList"></div>
+        </details>
+        <div id="stSteps" class="st-steps"><i data-k="analiz">Hazırlık</i><i data-k="konusma">Konuşma</i><i data-k="plan">Kurgu</i><i data-k="ses">Ses</i><i data-k="kontrol">Kontrol</i><i data-k="sahneler">Sahneler</i><i data-k="render">Render</i></div>
+        <div id="stProg" class="job">
+          <div class="job-bar"><i id="stBar"></i></div>
+          <div class="job-row"><span id="stMsg"></span><button id="stCancel" class="btn danger sm" type="button">İptal</button></div>
+        </div>
+        <div id="stResult" class="st-result" hidden>
+          <video id="stVideo" class="st-video" controls playsinline preload="metadata"></video>
+          <div class="st-actions">
+            <button id="stOpen" class="btn primary" type="button">Editörde aç</button>
+            <a id="stDownload" class="btn ok">İndir</a>
+          </div>
+          <div id="stRetryBox" class="field" hidden>
+            <div class="field-head">Sonuçtan memnun değil misin?</div>
+            <button id="stRetry" class="btn" type="button">Seçenekleri değiştirip yeniden oluştur</button>
+          </div>
+          <div id="stReviseBox" class="field">
+            <div class="field-head"><span>Değişiklik iste</span><small id="stSceneHint" class="muted"></small></div>
+            <div id="stScenes" class="st-scenes" hidden></div>
+            <textarea id="stRevise" class="st-prompt sm" rows="2" maxlength="2000" placeholder="Örn: Başlığı büyüt, renkleri daha sıcak yap, son sahne daha uzun kalsın."></textarea>
+            <div class="st-revise-actions">
+              <button id="stReviseGo" class="btn" type="button">Revize et</button>
+              <button id="stSceneClear" class="btn ghost sm" type="button" hidden>Seçimi temizle</button>
+            </div>
+          </div>
+        </div>
+        <div id="stNotes" class="panel-note" hidden></div>
+      </section>
+
+      <div id="stHistHead" class="sub-head" hidden>Önceki AI videoları</div>
+      <div id="stHistory" class="history"></div>
+    </div>
+  </div>
+</div>
+
+<div id="scrim" class="scrim" hidden></div>
+
+<!-- medya: Drive -->
+<div id="sheetMedia" class="sheet tall" hidden>
+  <div class="sheet-head">
+    <div>
+      <div id="mediaTitle" class="sheet-title">Medya ekle</div>
+      <div id="mediaHint" class="sheet-sub"></div>
+    </div>
+    <button id="mediaDone" class="btn primary sm">Bitti</button>
+  </div>
+  <div class="sheet-body flush">
+    <iframe id="drive" title="Drive"></iframe>
+  </div>
+</div>
+
+<!-- disa aktar -->
+<div id="sheetExport" class="sheet" hidden>
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title">Dışa Aktar</div>
+      <div id="exSize" class="sheet-sub"></div>
+    </div>
+    <button class="sheet-close" data-close aria-label="Kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field"><div class="field-head">Kalite</div><div id="exQuality"></div></div>
+    <div class="ex-row">
+      <div class="field"><div class="field-head">FPS</div><div id="exFps"></div></div>
+      <div class="field"><div class="field-head">Codec</div><div id="exCodec"></div></div>
+    </div>
+    <div class="ex-actions">
+      <button id="btnRender" class="btn primary">Videoyu Oluştur</button>
+      <button id="btnDraft" class="btn ghost" title="Yarım çözünürlük, hızlı kontrol için">Hızlı önizleme</button>
+    </div>
+
+    <div id="exJob" class="job" hidden>
+      <div class="job-bar"><i id="exBar"></i></div>
+      <div class="job-row">
+        <span id="exMsg"></span>
+        <button id="btnCancel" class="btn danger sm" hidden>İptal</button>
+      </div>
+    </div>
+
+    <div id="exResult" class="result" hidden>
+      <div id="exTitle" class="result-title"></div>
+      <video id="exVideo" controls playsinline preload="metadata"></video>
+      <a id="exDownload" class="btn ok">İndir (.mp4)</a>
+      <div id="igBox" class="ig-box" hidden>
+        <textarea id="igCaption" rows="2" maxlength="2200" placeholder="Açıklama (isteğe bağlı) #engrare"></textarea>
+        <button id="btnCaptionAI" class="btn ghost sm" type="button"></button>
+        <button id="btnIg" class="ig-btn">Instagram'a Gönder</button>
+        <div id="igStatus" class="ig-status"></div>
+        <div class="ig-account">
+          <span id="igWho">Hesap bağlı değil</span>
+          <button id="btnIgLink" class="link-btn">Bağla</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-head">Önceki renderlar</div>
+    <div id="exHistory" class="history"></div>
+  </div>
+</div>
+
+<!-- yeni proje -->
+<div id="sheetNew" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Yeni proje</div>
+    <button class="sheet-close" data-close aria-label="Kapat">✕</button>
+  </div>
+  <form id="newForm" class="sheet-body">
+    <label class="field">
+      <span class="field-head">Proje adı</span>
+      <input id="npName" class="text-input" maxlength="80" placeholder="Proje adı" autocomplete="off">
+    </label>
+    <div class="field">
+      <div class="field-head">Format</div>
+      <div id="npFormats"></div>
+    </div>
+    <button type="submit" class="btn primary">Projeyi oluştur</button>
+    <button type="button" id="npAI" class="btn ai-btn">✦ Ya da AI ile oluştur</button>
+    <button type="button" id="npOpen" class="link-btn">Mevcut bir projeyi aç</button>
+  </form>
+</div>
+
+<!-- projeler -->
+<div id="sheetProjects" class="sheet" hidden>
+  <div class="sheet-head">
+    <div class="sheet-title">Projeler</div>
+    <button class="sheet-close" data-close aria-label="Kapat">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="user-panel">
+      <span class="user-name">👤 <b id="who"></b></span>
+      <button id="logout" class="btn ghost sm">Çıkış</button>
+    </div>
+    <button id="newproj" class="btn primary">＋ Yeni proje</button>
+    <button id="aiNew" class="btn ai-btn">✦ AI ile video oluştur</button>
+    <div id="projects" class="projects"></div>
+    <div class="shortcuts muted">
+      Kısayollar: Boşluk oynat · S böl · Q başını sil · W sonunu sil · Delete sil ·
+      Ctrl+Z geri al · ← → kare · + − zoom
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+</body>
+</html>
